@@ -20,26 +20,34 @@ from rest_framework.decorators import action
 from django.utils.decorators import method_decorator
 from django.contrib.auth import get_user_model
 from rest_framework.generics import CreateAPIView
-
+from rest_framework.permissions import AllowAny
+from django.template.loader import get_template
+from .serializers import UserSerializer
 User = get_user_model()
 
 class UserRegistrationView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-
-            subject = 'Welcome to  Blogging Platform'
-            message = f"Dear {user.username},\n\nThank you for registering on our Blogging Platform. We are excited to have you on board!"
+            ctx = {
+                'user': user.username,  
+            }
+            subject = "Welcome to Blogging Platform"  
+            email_template = get_template('mail.html')
+            email_content = email_template.render(ctx)
             from_email = settings.DEFAULT_FROM_EMAIL
             to_email = user.email
-            send_mail(subject, message, from_email, [to_email])
+            send_mail(subject, '', from_email, [to_email], html_message=email_content)
 
             return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserLoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
